@@ -6,6 +6,7 @@
 #define LCD_BACKLIGHT_PIN 2
 #define BACKLIGHT_TIME 5000 // ms
 #define BUTTON_PIN 12
+#define DHT_POWER_PIN 22
 #define AP_SSID "Guest"
 #define AP_PSK "p4ssw0rd"
 #define HOSTNAME "htsensoresp32"
@@ -67,12 +68,21 @@ void scan_button(void * params) {
 }
 
 void query_sensor(void * params) {
+    int error_count = 0;
     for (;;) {
         float temperature_reading = dht.readTemperature();
         float humidity_reading = dht.readHumidity();
-        if (isnan(temperature_reading) || isnan(humidity_reading)) {
-            vTaskDelay(pdMS_TO_TICKS(2000));
+        if (error_count > 10) {
+            error_count = 0;
+            digitalWrite(DHT_POWER_PIN, LOW);
+            vTaskDelay(pdMS_TO_TICKS(3000));
+            digitalWrite(DHT_POWER_PIN, HIGH);
+            vTaskDelay(pdMS_TO_TICKS(5000));
+        } else if (isnan(temperature_reading) || isnan(humidity_reading)) {
+            error_count++;
+            vTaskDelay(pdMS_TO_TICKS(5000));
         } else {
+            error_count = 0;
             temperature = temperature_reading;
             humidity = humidity_reading;
             vTaskDelay(pdMS_TO_TICKS(60000));
@@ -85,6 +95,8 @@ void setup() {
     pinMode(LCD_BACKLIGHT_PIN, OUTPUT);
     digitalWrite(LCD_BACKLIGHT_PIN, HIGH);
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    pinMode(DHT_POWER_PIN, OUTPUT);
+    digitalWrite(DHT_POWER_PIN, HIGH);
 
     // Initialise peripherals
     dht.begin();
