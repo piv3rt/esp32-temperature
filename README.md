@@ -9,6 +9,8 @@ WiFi temperature and humidity sensor using a DHT22 and running on ESP32
 
 ## Required hardware:
 - ESP32 Dev Kit
-- 16x2 LCD screen
 - DHT22 temperature sensor
+
+## Optional hardware:
+- 16x2 LCD screen
 - Push button

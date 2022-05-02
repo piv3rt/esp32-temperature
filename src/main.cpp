@@ -1,11 +1,16 @@
+//#define ENABLE_LCD
 #include <Arduino.h>
+#ifdef ENABLE_LCD
 #include <LiquidCrystal.h>
+#endif
 #include <WiFi.h>
 #include <DHT.h>
 
+#ifdef ENABLE_LCD
 #define LCD_BACKLIGHT_PIN 2
 #define BACKLIGHT_TIME 5000 // ms
 #define BUTTON_PIN 12
+#endif
 #define DHT_POWER_PIN 22
 #define AP_SSID "Guest"
 #define AP_PSK "p4ssw0rd"
@@ -13,18 +18,23 @@
 #define DHTPIN 13
 #define DHTTYPE DHT22
 
+#ifdef ENABLE_LCD
 //                RS  EN   4   5   6   7
 LiquidCrystal lcd(14, 27, 26, 25, 33, 32);
+#endif
 WiFiServer server(8000);
 DHT dht(DHTPIN, DHTTYPE);
 
+#ifdef ENABLE_LCD
 // Custom "°" character for temperature display
 byte degrees[8] = {B00100, B01010, B00100, B00000, B00000, B00000, B00000};
 int screen_page;
+TimerHandle_t xBacklightTimer = NULL;
+#endif
 float temperature;
 float humidity;
-TimerHandle_t xBacklightTimer = NULL;
 
+#ifdef ENABLE_LCD
 void lcd_off() {
     lcd.clear();
     digitalWrite(LCD_BACKLIGHT_PIN, LOW);
@@ -66,6 +76,7 @@ void scan_button(void * params) {
         vTaskDelay(pdMS_TO_TICKS(30));
     }
 }
+#endif
 
 void query_sensor(void * params) {
     int error_count = 0;
@@ -92,19 +103,24 @@ void query_sensor(void * params) {
 
 void setup() {
     // Initialise pins
+    #ifdef ENABLE_LCD
     pinMode(LCD_BACKLIGHT_PIN, OUTPUT);
     digitalWrite(LCD_BACKLIGHT_PIN, HIGH);
     pinMode(BUTTON_PIN, INPUT_PULLUP);
+    #endif
     pinMode(DHT_POWER_PIN, OUTPUT);
     digitalWrite(DHT_POWER_PIN, HIGH);
 
     // Initialise peripherals
     dht.begin();
+    #ifdef ENABLE_LCD
     lcd.createChar(0, degrees);
     lcd.begin(16, 2);
+    #endif
     WiFi.setHostname(HOSTNAME);
     WiFi.begin(AP_SSID, AP_PSK);
 
+    #ifdef ENABLE_LCD
     lcd.print("Connecting...");
     while (WiFi.status() != WL_CONNECTED) {
         if (WiFi.status() == WL_NO_SSID_AVAIL) {
@@ -117,15 +133,18 @@ void setup() {
 
     // Display network status
     refresh_display(1);
+    #endif
     server.begin();
 
     // Run the tasks updating temp/humi and button state on core 0
     xTaskCreatePinnedToCore(query_sensor, "query_sensor", 4096, NULL, 0, NULL, 0);
+    #ifdef ENABLE_LCD
     xTaskCreatePinnedToCore(scan_button, "scan_button", 4096, NULL, 0, NULL, 0);
 
     // Create a timer allowing the LCD screen to turn off after a few seconds
     xBacklightTimer = xTimerCreate("lcd_off", pdMS_TO_TICKS(BACKLIGHT_TIME), pdFALSE, NULL, lcd_off_callback);
     xTimerReset(xBacklightTimer, 10);
+    #endif
 }
 
 void loop() {
