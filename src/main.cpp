@@ -15,7 +15,7 @@
 #define AP_SSID "Guest"
 #define AP_PSK "p4ssw0rd"
 #define HOSTNAME "htsensoresp32"
-#define DHTPIN 13
+#define DHTPIN 23
 #define DHTTYPE DHT22
 
 #ifdef ENABLE_LCD
@@ -81,8 +81,11 @@ void scan_button(void * params) {
 void query_sensor(void * params) {
     int error_count = 0;
     for (;;) {
+        portMUX_TYPE myMutex = portMUX_INITIALIZER_UNLOCKED;
+        taskENTER_CRITICAL(&myMutex);
         float temperature_reading = dht.readTemperature();
         float humidity_reading = dht.readHumidity();
+        taskEXIT_CRITICAL(&myMutex);
         if (error_count > 10) {
             error_count = 0;
             digitalWrite(DHT_POWER_PIN, LOW);
