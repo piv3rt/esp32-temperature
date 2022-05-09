@@ -33,6 +33,7 @@ TimerHandle_t xBacklightTimer = NULL;
 #endif
 float temperature;
 float humidity;
+float heat_index;
 
 #ifdef ENABLE_LCD
 void lcd_off() {
@@ -99,6 +100,7 @@ void query_sensor(void * params) {
             error_count = 0;
             temperature = temperature_reading;
             humidity = humidity_reading;
+            heat_index = dht.computeHeatIndex(temperature, humidity, false);
             vTaskDelay(pdMS_TO_TICKS(60000));
         }
     }
@@ -171,7 +173,10 @@ void loop() {
                             "# HELP room_humidity_ratio Room humidity\n"
                             "# TYPE room_humidity_ratio gauge\n"
                             "room_humidity_ratio{instance=\"%s\",job=\"air-quality\"} %f\n"
-                            , HOSTNAME, temperature, HOSTNAME, humidity
+                            "# HELP room_heat_index Room heat index\n"
+                            "# TYPE room_heat_index gauge\n"
+                            "room_heat_index{instance=\"%s\",job=\"air-quality\"} %f\n"
+                            , HOSTNAME, temperature, HOSTNAME, humidity, HOSTNAME, heat_index
                         );
                     } else {
                         client.println("HTTP/1.1 404 Not Found");
